@@ -1,10 +1,12 @@
-import globals from "globals";
-import js from "@eslint/js";
+    const globals = require('globals');
 
-export default [
-    {languageOptions: { globals: globals.node } },
-  js.configs.recommended,
-  {
-    // Your custom configurations or overrides if neeeded. 
-  },
-];
+    module.exports = [
+      // ... other configurations
+      {
+        languageOptions: {
+          globals: {
+            ...globals.node
+          }
+        }
+      }
+    ];

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-  "lint": "eslint --ext .jsx --fix src",
+  "lint": "eslint --fix src",
   "test": "jest --coverage",
   "build": "docker build -t it-works-on-my-machine:latest."
 },
