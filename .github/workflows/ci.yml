@@ -32,6 +32,9 @@ jobs:
 
       - name: Run linter
         run: npm run lint
+      
+      - name: start server
+        run: npm start & 
 
       - name: Run tests with coverage
         run: npm test -- --coverage
