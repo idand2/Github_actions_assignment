@@ -10,4 +10,9 @@ RUN npm install
 COPY . .
 
 EXPOSE 3000
-CMD ["node", "server.js"]
+
+HEALTHCHECK --interval=1s --timeout=3s --start-period=1s --retries=3 \
+  CMD curl -f http://localhost:3000/health || exit 1
+
+
+CMD ["node", "src/server.js"]
