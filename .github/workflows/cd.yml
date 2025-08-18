@@ -1,5 +1,3 @@
-# .github/workflows/cd.yml
-
 name: Continuous Deployment
 
 on:
@@ -13,24 +11,25 @@ jobs:
   build-image:
     name: Build Docker Image
     runs-on: ubuntu-latest
-    outputs:
-      tags: ${{ steps.meta.outputs.tags }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # qemu combined with buildx allows building multi-platform images
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+        # help create a consistent image name across different runs
       - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: test_container
+          images: your-app-name 
 
+          # build and push - for our case we only build and export to tar (no available registry) 
       - name: Build image and export to tar
         uses: docker/build-push-action@v6
         with:
@@ -48,13 +47,10 @@ jobs:
           path: image.tar
 
   test-deployment:
-    name: Mimic Deployment with Docker Compose
+    name: Mimic Deployment
     needs: build-image
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Download image artifact
         uses: actions/download-artifact@v4
         with:
@@ -67,8 +63,8 @@ jobs:
         id: image_tag
         run: echo "tag=$(docker images --format '{{.Repository}}:{{.Tag}}' | head -n 1)" >> $GITHUB_OUTPUT
 
-      - name: Create .env file for Docker Compose
-        run: echo "WEB_IMAGE_TAG=${{ steps.image_tag.outputs.tag }}" > .env
+      - name: Run the container
+        run: docker run -d --name test_container -p 3000:3000 ${{ steps.image_tag.outputs.tag }}
 
       # use docker health check to ensure deployemnt is successful.  
       - name: health check
