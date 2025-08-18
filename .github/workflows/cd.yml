@@ -95,4 +95,4 @@ jobs:
 
       - name: Stop the container
         if: always()
-        run: docker compose down
+        run: docker stop test_container
