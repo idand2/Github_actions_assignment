@@ -83,7 +83,7 @@ jobs:
                 sleep 1
             done
             echo "Container did not become healthy in time."
-            docker-compose logs web > docker_log.txt        
+            docker logs test_container > docker_log.txt        
             exit 1
 
       - name: Upload Docker logs on failure
