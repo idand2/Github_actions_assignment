@@ -1,0 +1,103 @@
+# .github/workflows/cd.yml
+
+name: Continuous Deployment
+
+on:
+  workflow_run:
+    workflows: ["Continuous Integration"]
+    types:
+      - completed
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build-image:
+    name: Build Docker Image
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # qemu combined with buildx allows building multi-platform images
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+        # help create a consistent image name across different runs
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: your-app-name 
+
+          # build and push - for our case we only build and export to tar (no available registry) 
+      - name: Build image and export to tar
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=docker,dest=image.tar
+          platforms: linux/amd64
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: image.tar
+
+  test-deployment:
+    name: Mimic Deployment
+    needs: build-image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load image from tarball
+        run: docker load --input image.tar
+
+      - name: Get the image tag
+        id: image_tag
+        run: echo "tag=$(docker images --format '{{.Repository}}:{{.Tag}}' | head -n 1)" >> $GITHUB_OUTPUT
+
+      - name: Run the container
+        run: docker run -d --name your-app-container -p 3000:3000 ${{ steps.image_tag.outputs.tag }}
+
+      - name: Health Check
+        run: |
+          echo "Waiting for the server to start..."
+          sleep 10
+          echo "Performing health check..."
+          curl -f http://localhost:3000
+
+      - name: Stop the container
+        if: always() # This step runs even if the health check fails
+        run: docker stop your-app-container
+
+#   notify:
+#     name: Send Slack Notification
+#     needs: [test-deployment]
+#     runs-on: ubuntu-latest
+#     if: always()
+#     steps:
+#       - name: Send Slack notification on success
+#         if: ${{ needs.test-deployment.result == 'success' }}
+#         run: |
+#           curl -X POST -H 'Content-type: application/json' \
+#           --data '{"text":"✅ Simulated deployment for `${{ github.repository }}` succeeded."}' \
+#           ${{ secrets.SLACK_WEBHOOK_URL }}
+#       - name: Send Slack notification on failure
+#         if: ${{ needs.test-deployment.result != 'success' }}
+#         run: |
+#           curl -X POST -H 'Content-type: application/json' \
+#           --data '{"text":"❌ Simulated deployment for `${{ github.repository }}` failed."}' \
+#           ${{ secrets.SLACK_WEBHOOK_URL }}
