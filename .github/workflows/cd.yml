@@ -70,22 +70,24 @@ jobs:
       - name: Create .env file for Docker Compose
         run: echo "WEB_IMAGE_TAG=${{ steps.image_tag.outputs.tag }}" > .env
 
-        # use condition polling to perform a health check 
+      # use docker health check to ensure deployemnt is successful.  
       - name: health check
+        id: health_check
         run: |
             echo "startign health check"
             for i in {1..3}
             do
-                response=$(curl -s --fail http://localhost:3000/health) 
-                echo "Response: $response"
-                if [[ $response == *"Still working"* ]] ; then
-                echo "Health check passed on attempt $i "
+                status=$(docker inspect --format '{{.State.Health.Status}}' test_container)
+                echo "Attempt $i: Container status is $status"
+                if [ "$status" = "healthy" ]; then
+                echo "Container is healthy! "
                 exit 0
                 fi
                 echo "Attempt $i failed. Retrying in 1 seconds..."
                 sleep 1
             done
-            echo "Health check failed after 3 attempts"
+            echo "Container did not become healthy in time."
+            docker-compose logs web > docker_log.txt        
             exit 1
 
       - name: Upload Docker logs on failure
