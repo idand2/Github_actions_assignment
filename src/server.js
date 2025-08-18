@@ -1,7 +1,7 @@
 const express = require('express');
 const app = express();
 
-app.get('/health', (req, res) => res.send('Still working... on *my* machine 🧃'));
+app.get('/health', (req, res) => res.send('Still working... on *my* machine 🧃'), console.log('checking my health?'));
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
