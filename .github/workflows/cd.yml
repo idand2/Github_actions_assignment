@@ -85,7 +85,7 @@ jobs:
               echo "Container is healthy!"
               exit 0
             fi
-            sleep 1
+            sleep 2
           done
           echo "Container did not become healthy in time"
           echo "storing logs to docker_log.txt---"
