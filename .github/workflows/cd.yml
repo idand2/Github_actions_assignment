@@ -1,10 +1,7 @@
 name: Continuous Deployment
 
 on:
-  workflow_run:
-    workflows: ["Continuous Integration"]
-    types:
-      - completed
+  push:
     branches: [ "main" ]
 
 permissions:
@@ -13,7 +10,6 @@ permissions:
 jobs:
   build-image:
     name: Build Docker Image
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -68,18 +64,14 @@ jobs:
         run: echo "tag=$(docker images --format '{{.Repository}}:{{.Tag}}' | head -n 1)" >> $GITHUB_OUTPUT
 
       - name: Run the container
-        run: docker run -d --name your-app-container -p 3000:3000 ${{ steps.image_tag.outputs.tag }}
+        run: docker run -d --name test_container -p 3000:3000 ${{ steps.image_tag.outputs.tag }}
 
-      - name: Health Check
-        run: |
-          echo "Waiting for the server to start..."
-          sleep 10
-          echo "Performing health check..."
-          curl -f http://localhost:3000
+      - name: test_app 
+        run: sh test.sh
 
       - name: Stop the container
         if: always() # This step runs even if the health check fails
-        run: docker stop your-app-container
+        run: docker stop test_container
 
 #   notify:
 #     name: Send Slack Notification
