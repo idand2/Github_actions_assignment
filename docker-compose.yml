@@ -3,4 +3,4 @@ services:
     # The image from the cd workflow
     image: ${WEB_IMAGE_TAG}
     ports:
-      - "8080:3000"
+      - "3000:3000"
