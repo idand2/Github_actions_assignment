@@ -1,0 +1,10 @@
+# docker-compose.yml
+
+version: '3.8'
+
+services:
+  web:
+    # The image from the cd workflow
+    image: ${WEB_IMAGE_TAG}
+    ports:
+      - "3000:3000"
