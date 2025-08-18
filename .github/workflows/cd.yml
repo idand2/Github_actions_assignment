@@ -80,7 +80,7 @@ jobs:
                 exit 0
                 fi
                 echo "Attempt $i failed. Retrying in 1 seconds..."
-                sleep 1
+                sleep 2
             done
             echo "Container did not become healthy in time."
             docker logs test_container > docker_log.txt        
