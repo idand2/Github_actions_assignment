@@ -72,7 +72,9 @@ jobs:
             echo "startign health check"
             for i in {1..3}
             do
-                if curl -sf --no-buffer http://localhost:3000/health | grep -q "Still working"*]]; then
+                response=$(curl -s --fail http://localhost:3000/health) 
+                echo "Response: $response"
+                if [[ $response == *"Still working"* ]] ; then
                 echo "Health check passed on attempt $i "
                 exit 0
                 fi
