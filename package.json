@@ -6,7 +6,8 @@
     "lint": "eslint --fix src",
     "test": "jest --coverage",
     "build": "docker build -t it-works-on-my-machine:latest.",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "test:e2e": "playwright test"
   },
   "keywords": [],
   "author": "",

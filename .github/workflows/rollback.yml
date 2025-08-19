@@ -44,21 +44,21 @@ jobs:
       - name: Verify Container Health
         id: health_check
         run: |
-          echo "Waiting for rolled-back container to become healthy..."
-          CONTAINER_NAME=$(docker compose ps -q web)
-          for i in {1..3}
-          do
-            status=$(docker inspect --format '{{.State.Health.Status}}' $CONTAINER_NAME)
-            echo "Attempt $i: Container status is $status"
-            if [ "$status" = "healthy" ]; then
-              echo "Container is healthy!"
-              exit 0
-            fi
-            sleep 3
-          done
-          echo "Container did not become healthy in time"
-          docker compose logs web > docker_log.txt
-          exit 1
+            echo "startign health check"
+            for i in {1..5}
+            do
+                status=$(docker inspect --format '{{.State.Health.Status}}' test_container)
+                echo "Attempt $i: Container status is $status"
+                if [ "$status" = "healthy" ]; then
+                echo "Container is healthy! "
+                exit 0
+                fi
+                echo "Attempt $i failed. Retrying in 1 seconds..."
+                sleep 3
+            done
+            echo "Container did not become healthy in time."
+            docker logs test_container > docker_log.txt        
+            exit 1
 
       - name: Upload Docker logs on failure
         if: failure() && steps.health_check.outcome == 'failure'
@@ -69,7 +69,7 @@ jobs:
 
       - name: Stop the container
         if: always()
-        run: docker compose down
+        run: docker stop test_container
 
     #   - name: Send Slack Notification on Success
     #     if: success()

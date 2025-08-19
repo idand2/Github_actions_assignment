@@ -1,4 +1,5 @@
-name: Continuous Deployment
+# .github/workflows/cd.yml
+name: Continuous Delivery
 
 on:
   push:
@@ -6,16 +7,19 @@ on:
 
 permissions:
   contents: read
+  deployments: write # Needed to create deployments for E2E tests
 
 jobs:
   build-image:
     name: Build Docker Image
     runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      # qemu combined with buildx allows building multi-platform images
+      
+        # qemu combined with buildx allows building multi-platform images
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -27,9 +31,11 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: your-app-name 
+          images: run-my-machine
+          tags: |
+            type=sha,prefix=,format=long
 
-          # build and push - for our case we only build and export to tar (no available registry) 
+        # build and push - for our case we only build and export to tar (no available registry) 
       - name: Build image and export to tar
         uses: docker/build-push-action@v6
         with:
@@ -46,10 +52,48 @@ jobs:
           name: docker-image
           path: image.tar
 
-  test-deployment:
-    name: Mimic Deployment
+  # In a standard CI/CD pipeline, we would push the built image to a container registry
+  # like Docker Hub, Ghcr or  GAR(google).
+  # Deployment servers then pull the image from this registry.
+  # 
+  # publish-image:
+  #   name: Publish to GHCR
+  #   needs: build-image
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Download image artifact
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: docker-image
+  #
+  #     - name: Load image from tarball
+  #       run: docker load --input image.tar
+  #
+  #     - name: Log in to GitHub Container Registry
+  #       uses: docker/login-action@v3
+  #       with:
+  #         registry: ghcr.io
+  #         username: ${{ github.actor }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
+  #
+  #     - name: Push image to registry
+  #       run: |
+  #         IMAGE_TAG_FROM_BUILD="${{ needs.build-image.outputs.image_tag }}"
+  #         NEW_TAG="ghcr.io/${{ github.repository }}:${{ github.sha }}"
+  #         docker tag $IMAGE_TAG_FROM_BUILD $NEW_TAG
+  #         echo "Pushing image: $NEW_TAG"
+  #         docker push $NEW_TAG
+  # ---------------------------------------------
+
+  deploy-staging:
+    name: Deploy to Staging
     needs: build-image
     runs-on: ubuntu-latest
+    outputs:
+      url: ${{ vars.STAGING_URL }}
+    environment:
+      name: staging
+      url: ${{ vars.STAGING_URL }}
     steps:
       - name: Download image artifact
         uses: actions/download-artifact@v4
@@ -59,40 +103,94 @@ jobs:
       - name: Load image from tarball
         run: docker load --input image.tar
 
-      - name: Get the image tag
-        id: image_tag
-        run: echo "tag=$(docker images --format '{{.Repository}}:{{.Tag}}' | head -n 1)" >> $GITHUB_OUTPUT
-
-      - name: Run the container
-        run: docker run -d --name test_container -p 3000:3000 ${{ steps.image_tag.outputs.tag }}
-
-      # use docker health check to ensure deployemnt is successful.  
-      - name: health check
-        id: health_check
+      - name: 1. Rolling Deployment to Staging
+        # This step connects to the staging servers and deploys the new version.
+        # using rolling deployment -  updates servers one by one.
         run: |
-            echo "startign health check"
-            for i in {1..5}
-            do
-                status=$(docker inspect --format '{{.State.Health.Status}}' test_container)
-                echo "Attempt $i: Container status is $status"
-                if [ "$status" = "healthy" ]; then
-                echo "Container is healthy! "
-                exit 0
-                fi
-                echo "Attempt $i failed. Retrying in 1 seconds..."
-                sleep 3
-            done
-            echo "Container did not become healthy in time."
-            docker logs test_container > docker_log.txt        
-            exit 1
+          echo "Connecting to staging environment..."
+          IMAGE_TAG="${{ needs.build-image.outputs.image_tag }}"
+          echo "Deploying image $IMAGE_TAG from local artifact"
+          # ======================= PSEUDO-CODE FOR A ROLLING DEPLOYMENT =======================
+          #
+          # # This script would be run on your server via SSH.
+          # # It assumes the docker image.tar file has been copied to the server.
+          #
+          # docker load --input image.tar
+          #
+          # for container_id in $(get_staging_container_ids); do
+          #   echo "Updating container $container_id..."
+          #   docker stop $container_id && docker rm $container_id
+          #   docker run -d --name $container_id -p <port>:<port> $IMAGE_TAG
+          #
+          #   sleep 15
+          #   health_check($container_id)
+          # done
+          #
+          # echo "Rolling deployment to staging complete."
+          # ====================================================================================
 
-      - name: Upload Docker logs on failure
-        if: failure() && steps.health_check.outcome == 'failure'
-        uses: actions/upload-artifact@v4
+  e2e-test-staging:
+    name: 🎭 E2E Test Staging
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout E2E test suite
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          name: docker-logs
-          path: docker_log.txt
+          node-version: '18'
+      - name: Install test dependencies
+        run: npm install
+      - name: Run E2E tests against Staging
+        run: npm run test:e2e
+        env:
+          # Get the URL from the successful deployment step in the previous job
+          BASE_URL: ${{ needs.deploy-staging.outputs.url }}
 
-      - name: Stop the container
-        if: always()
-        run: docker stop test_container
+
+  deploy-production:
+    name: Deploy to Production
+    needs: [e2e-test-staging, build-image]
+    runs-on: ubuntu-latest
+    environment:
+      name: production # This creates a manual approval gate in GitHub's UI
+      url: ${{vars.PROD_URL}} # secret 
+    steps:
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load image from tarball
+        run: docker load --input image.tar
+
+      - name: 2. Blue-Green Deployment to Production
+        # Blue-Green strategy for small simpel architecture apps. where the new version ("Blue") is deployed alongside
+        # the current version ("Green"). After verification, traffic is instantly switched.
+        # - Zero Downtime: Users experience no interruption.
+        # - Instant Rollback: Just switch traffic back to the "Green" environment if issues arise.
+        run: |
+          echo "Connecting to production environment..."
+          IMAGE_TAG="${{ needs.build-image.outputs.image_tag }}"
+          echo "Starting Blue-Green deployment for image $IMAGE_TAG"
+          # ======================= PSEUDO-CODE FOR A BLUE-GREEN DEPLOYMENT =======================
+          #
+          # # On your production server, after loading image.tar:
+          # docker load --input image.tar
+          #
+          # if [ "$(is_green_active)" == "true" ]; then
+          #   INACTIVE_PORT=8081 # Blue
+          # else
+          #   INACTIVE_PORT=8080 # Green
+          # fi
+          #
+          # docker run -d --name app-inactive -p $INACTIVE_PORT:3000 $IMAGE_TAG
+          # sleep 15
+          # curl -f http://localhost:$INACTIVE_PORT/health
+          #
+          # update_nginx_config_to_port $INACTIVE_PORT
+          # sudo systemctl reload nginx
+          #
+          # echo "Blue-Green deployment successful."
+          # =======================================================================================
