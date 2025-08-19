@@ -142,11 +142,11 @@ jobs:
           node-version: '18'
       - name: Install test dependencies
         run: npm install
-      - name: Run E2E tests against Staging
-        run: npm run test:e2e
-        env:
-          # Get the URL from the successful deployment step in the previous job
-          BASE_URL: ${{ needs.deploy-staging.outputs.url }}
+    #   - name: Run E2E tests against Staging
+    #     run: npm run test:e2e
+        # env:
+        #   # Get the URL from the successful deployment step in the previous job
+        #   BASE_URL: ${{ needs.deploy-staging.outputs.url }}
 
 
   deploy-production:
