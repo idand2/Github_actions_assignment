@@ -1,86 +1,45 @@
-name: Manual Rollback from Commit
+name: Manual Rollback Deployment
 
 on:
   workflow_dispatch:
     inputs:
       commit_sha:
-        description: 'The full commit SHA to roll back to (e.g., a1b2c3d4...)'
+        description: 'The full Git SHA of the version you want to restore'
         required: true
         type: string
-
-permissions:
-  contents: read
+      environment:
+        description: 'The environment to roll back (e.g., production)'
+        required: true
+        type: choice
+        options:
+          - production
+          - staging
 
 jobs:
-  build-and-test-rollback:
-    name: Build and Test Rollback
+  rollback-deploy:
+    name: Rollback ${{ github.event.inputs.environment }}
     runs-on: ubuntu-latest
-    environment: production # Simulating a rollback to a production-like environment
+    environment:
+      # Use the environment selected by the user
+      name: ${{ github.event.inputs.environment }}
+
     steps:
-      - name: Checkout specific commit
-        uses: actions/checkout@v4
-        with:
-          # This is the key step: check out the exact code from the specified commit
-          ref: ${{ github.event.inputs.commit_sha }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build image from old source
-        id: build
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: false
-          load: true # Load the image directly into the runner's Docker daemon
-          tags: your-app-name:rollback-${{ github.event.inputs.commit_sha }}
-
-      - name: Create .env file for Docker Compose
-        run: echo "WEB_IMAGE_TAG=${{ steps.build.outputs.digest }}" > .env
-
-      - name: Run the container using Docker Compose
-        run: docker compose up -d
-
-      - name: Verify Container Health
-        id: health_check
+      - name: Deploy previous version
+        # Docker image from the registry, that corresponds to the provided commit SHA.
+        # It then performs a standard zero-downtime deployment using that known-good image.
         run: |
-            echo "startign health check"
-            for i in {1..5}
-            do
-                status=$(docker inspect --format '{{.State.Health.Status}}' test_container)
-                echo "Attempt $i: Container status is $status"
-                if [ "$status" = "healthy" ]; then
-                echo "Container is healthy! "
-                exit 0
-                fi
-                echo "Attempt $i failed. Retrying in 1 seconds..."
-                sleep 3
-            done
-            echo "Container did not become healthy in time."
-            docker logs test_container > docker_log.txt        
-            exit 1
+          echo "Starting rollback of the ${{ github.event.inputs.environment }} environment..."
+          IMAGE_TAG="your-app-name:${{ github.event.inputs.commit_sha }}"
+          echo "Targeting previously-approved image: $IMAGE_TAG"
 
-      - name: Upload Docker logs on failure
-        if: failure() && steps.health_check.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        with:
-          name: rollback-docker-logs
-          path: docker_log.txt
-
-      - name: Stop the container
-        if: always()
-        run: docker stop test_container
-
-    #   - name: Send Slack Notification on Success
-    #     if: success()
-    #     run: |
-    #       curl -X POST -H 'Content-type: application/json' \
-    #       --data '{"text":"⏪ Simulated production has been successfully rolled back to commit `${{ github.event.inputs.commit_sha }}`.\nTriggered by: `${{ github.actor }}`"}' \
-    #       ${{ secrets.SLACK_WEBHOOK_URL }}
-
-    #   - name: Send Slack Notification on Failure
-    #     if: failure()
-    #     run: |
-    #       curl -X POST -H 'Content-type: application/json' \
-    #       --data '{"text":"❌ Simulated production rollback to commit `${{ github.event.inputs.commit_sha }}` FAILED.\nTriggered by: `${{ github.actor }}`"}' \
-    #       ${{ secrets.SLACK_WEBHOOK_URL }}
+          # ======================= PSEUDO-CODE FOR A ROLLBACK DEPLOYMENT ======================
+          #
+          # echo "Executing blue-green deployment with rollback image..."
+          #
+          # `blue_green_deployment.sh ` : The script would pull the old image and safely switch traffic back to it.
+          # performing a monitoring of the ports, updating the inactive one,
+          # switch the traffic to the updated, and update the new inactive one.
+          # sh `blue_green_deployment.sh `
+          #
+          # echo "Rollback to version ${{ github.event.inputs.commit_sha }} is complete."
+          # =======================================================================================

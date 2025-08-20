@@ -178,7 +178,7 @@ jobs:
           #
           # # On your production server, after loading image.tar:
           # docker load --input image.tar
-          #
+          # psuedu code for blue-green deployment: 
           # if [ "$(is_green_active)" == "true" ]; then
           #   INACTIVE_PORT=8081 # Blue
           # else
