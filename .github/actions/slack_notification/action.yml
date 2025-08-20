@@ -1,0 +1,27 @@
+# .github/actions/slack-notify/action.yml
+
+name: 'Post to Slack'
+description: 'update Slack channel with job status.'
+
+inputs:
+  slack_webhook_url:
+    description: 'The Slack incoming webhook URL.'
+    required: true
+  job_status:
+    description: 'The job status'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Send Slack Notification
+      run: ${{ github.action_path }}/send.sh
+      shell: bash
+      env:
+        # Pass all inputs and context to the script
+        SLACK_WEBHOOK_URL: ${{ inputs.slack_webhook_url }}
+        JOB_STATUS: ${{ inputs.job_status }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_RUN_ID: ${{ github.run_id }}
+        GITHUB_SHA: ${{ github.sha }}
+        GITHUB_WORKFLOW: ${{ github.workflow }}

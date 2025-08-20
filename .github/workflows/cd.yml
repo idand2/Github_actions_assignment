@@ -194,3 +194,20 @@ jobs:
           #
           # echo "Blue-Green deployment successful."
           # =======================================================================================
+
+  notify:
+    name: 📣 Notify
+    # This job will always run, regardless of the outcome of previous jobs
+    if: always()
+    needs: [deploy-production] # Depends on the final job in the sequence
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Slack notification
+        # uses: ./.github/actions/slack-notify
+        # with:
+        #   slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        #   job_status: ${{ needs.deploy-production.result }}
+        run: |
+          echo "This step would send a notification for status: ${{ needs.deploy-production.result }}"
+          echo "A blank status means the deployment was successful."
+          echo "A status of 'failure' or 'skipped' indicates a problem in the pipeline."
