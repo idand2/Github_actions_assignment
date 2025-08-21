@@ -4,6 +4,9 @@
 if [[ "${JOB_STATUS}" == "success" ]]; then
   MESSAGE_HEADER="✅ Workflow Succeeded: ${GITHUB_WORKFLOW}"
   BUTTON_STYLE="primary"
+elif [[ "${JOB_STATUS}" == "waiting" ]]; then # ADDED THIS BLOCK
+  MESSAGE_HEADER="⏳ Waiting for Approval: ${GITHUB_WORKFLOW}"
+  BUTTON_STYLE="primary"
 else
   MESSAGE_HEADER="❌ Workflow Failure: ${GITHUB_WORKFLOW}"
   BUTTON_STYLE="danger"
@@ -15,22 +18,13 @@ MESSAGE_JSON=$(cat <<EOF
   "blocks": [
     {
       "type": "header",
-      "text": {
-        "type": "plain_text",
-        "text": "${MESSAGE_HEADER}"
-      }
+      "text": { "type": "plain_text", "text": "${MESSAGE_HEADER}" }
     },
     {
       "type": "section",
       "fields": [
-        {
-          "type": "mrkdwn",
-          "text": "*Repo:*\n<https://github.com/${GITHUB_REPOSITORY}|${GITHUB_REPOSITORY}>"
-        },
-        {
-          "type": "mrkdwn",
-          "text": "*Commit:*\n<https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}|${GITHUB_SHA::7}>"
-        }
+        { "type": "mrkdwn", "text": "*Repo:*\n<https://github.com/${GITHUB_REPOSITORY}|${GITHUB_REPOSITORY}>" },
+        { "type": "mrkdwn", "text": "*Commit:*\n<https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}|${GITHUB_SHA::7}>" }
       ]
     },
     {
@@ -38,10 +32,7 @@ MESSAGE_JSON=$(cat <<EOF
       "elements": [
         {
           "type": "button",
-          "text": {
-            "type": "plain_text",
-            "text": "View Run"
-          },
+          "text": { "type": "plain_text", "text": "View Run" },
           "style": "${BUTTON_STYLE}",
           "url": "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
         }
@@ -52,7 +43,7 @@ MESSAGE_JSON=$(cat <<EOF
 EOF
 )
 
-# Send the notification with curl
+# Send the notification using curl
 echo "Sending notification to Slack..."
 curl -X POST \
      -H "Content-type: application/json" \

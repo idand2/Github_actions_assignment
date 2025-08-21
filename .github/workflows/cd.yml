@@ -146,11 +146,27 @@ jobs:
         # env:
         #   # Get the URL from the successful deployment step in the previous job
         #   BASE_URL: ${{ needs.deploy-staging.outputs.url }}
+  
+  notify-waiting-for-approval:
+    name: ⏳ Notify Waiting for Approval
+    if: success()
+    needs: e2e-test-staging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Slack notification for pending approval
+        # the if: suceess is here to clarify the notification is sent only if the previous jobs succeeded.
+        # This step is commented out as no real webhook is configured.
+        # uses: ./.github/actions/slack-notify
+        # with:
+        #   slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        #   job_status: 'waiting' # Pass our new custom status
+        run: |
+          echo "This step would send a Slack notification that the workflow is waiting for approval."
 
 
   deploy-production:
     name: Deploy to Production
-    needs: [e2e-test-staging, build-image]
+    needs: [notify-waiting-for-approval, build-image]
     runs-on: ubuntu-latest
     environment:
       name: production # This creates a manual approval gate in GitHub's UI
