@@ -1,4 +1,3 @@
-# .github/workflows/cd.yml
 name: Continuous Delivery
 
 on:
@@ -155,7 +154,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: production # This creates a manual approval gate in GitHub's UI
-      url: ${{vars.PROD_URL}} # secret 
+      url: ${{vars.PROD_URL}} 
     steps:
       - name: Download image artifact
         uses: actions/download-artifact@v4
@@ -199,7 +198,7 @@ jobs:
     name: 📣 Notify
     # This job will always run, regardless of the outcome of previous jobs
     if: always()
-    needs: [deploy-production] # Depends on the final job in the sequence
+    needs: [deploy-production]
     runs-on: ubuntu-latest
     steps:
       - name: Send Slack notification

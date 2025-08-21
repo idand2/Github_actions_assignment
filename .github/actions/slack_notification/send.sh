@@ -1,7 +1,6 @@
 #!/bin/bash
-# This script formats and sends a dynamic notification to Slack.
 
-# 1. Set message content based on the job status
+# Set message content 
 if [[ "${JOB_STATUS}" == "success" ]]; then
   MESSAGE_HEADER="✅ Workflow Succeeded: ${GITHUB_WORKFLOW}"
   BUTTON_STYLE="primary"
@@ -10,7 +9,7 @@ else
   BUTTON_STYLE="danger"
 fi
 
-# 2. Construct the JSON payload using a 'here document' for readability
+# Construct the JSON payload
 MESSAGE_JSON=$(cat <<EOF
 {
   "blocks": [
@@ -53,7 +52,7 @@ MESSAGE_JSON=$(cat <<EOF
 EOF
 )
 
-# 3. Send the notification using curl
+# Send the notification with curl
 echo "Sending notification to Slack..."
 curl -X POST \
      -H "Content-type: application/json" \
