@@ -1,42 +1,33 @@
-CI/CD Strategy & Reasoning
-progressive, multi-stage deployment model that emphasizes security and reliability by  validating changes in increasingly production-like environments. The entire process is built on the foundation of immutable artifacts, meaning we build our Docker image once and promote that exact, unchanged artifact through every stage.
+CI/CD Strategy & Reasoning:
+    progressive, multi-stage deployment model that emphasizes security and reliability by  validating changes in increasingly production-like environments. The entire process is built on the foundation of immutable artifacts, meaning we build our Docker image once and promote that exact, unchanged artifact through every stage.
 
-The Three Stages of a Release
+The Three Stages of a Release:
 
-Feature Branch CI (dev/**): For maximum developer velocity, any push to a branch prefixed with dev/ triggers a lightweight CI workflow. This process runs only the fastest, most essential checks (linting, sanity unit tests, Dockerfile validation) to provide immediate feedback without slowing down the development loop.
+1. Feature Branch CI (dev/**): For maximum developer velocity, any push to a branch prefixed with dev/ triggers a lightweight CI workflow. This process runs only the fastest, most essential checks (linting, sanity unit tests, Dockerfile validation) to provide immediate feedback without slowing down the development loop.
 
-Pull Request CI (to main): Before any code can be merged into the main branch, it must pass a comprehensive suite of quality and security gates. This is our primary line of defense and includes:
+2. Pull Request CI (to main): Before any code can be merged into the main branch, it must pass a comprehensive suite of quality and security gates. This is our primary line of defense and includes:
+ - Full Unit Testing: Unit tests with code coverage analysis.
+ - SAST (Static Application Security Testing): CodeQL scans our source code for potential vulnerabilities.
+ - SCA (Software Composition Analysis): npm audit scans our third-party dependencies for known security issues.
 
-Full Unit Testing: Unit tests with code coverage analysis.
+3. Continuous Delivery (on main): A successful merge to main kicks off the release process, which progresses through two key environments:
+ - Staging: The application is automatically deployed to a production-like staging environment. Here, we run a full suite of end-to-end (E2E) tests to validate the application's behavior in a live, integrated setting.
 
-SAST (Static Application Security Testing): CodeQL scans our source code for potential vulnerabilities.
+ - Production: After staging is verified, the pipeline pauses. A manual approval from a designated reviewer is required to proceed. The production deployment itself is a zero-downtime Blue-Green release managed by a would be robust Python script(not provided).
 
-SCA (Software Composition Analysis): npm audit scans our third-party dependencies for known security issues.
+How to Run/Deploy the Project:
+    The pipeline is designed to be almost entirely automated, with developer interaction centered around the standard Git workflow.
 
-Continuous Delivery (on main): A successful merge to main kicks off the release process, which progresses through two key environments:
+    Day-to-Day Development- 
+    1. Create a feature branch using the naming convention: git checkout -b dev/your-feature-name.
+    2. Push commits to your branch. The lightweight Feature Branch CI workflow will run automatically, providing fast feedback.
+    3. When ready, open a Pull Request to the main branch. This will trigger the full, comprehensive CI workflow. All status checks must pass before merging.
 
-Staging: The application is automatically deployed to a production-like staging environment. Here, we run a full suite of end-to-end (E2E) tests to validate the application's behavior in a live, integrated setting.
+    Production Release:
+    1. Once a Pull Request is merged into main, the Continuous Delivery workflow begins automatically.
+    2. After the staging deployment and E2E tests succeed, the workflow will pause and await manual approval for the production release.
 
-Production: After staging is verified, the pipeline pauses. A manual approval from a designated reviewer is required to proceed. The production deployment itself is a zero-downtime Blue-Green release managed by a would be robust Python script(not provided).
-
-How to Run/Deploy the Project
-The pipeline is designed to be almost entirely automated, with developer interaction centered around the standard Git workflow.
-
-Day-to-Day Development
-
-Create a feature branch using our naming convention: git checkout -b dev/your-feature-name.
-
-Push commits to your branch. The lightweight Feature Branch CI workflow will run automatically, providing fast feedback.
-
-When ready, open a Pull Request to the main branch. This will trigger the full, comprehensive CI workflow. All status checks must pass before merging.
-
-Production Release
-
-Once a Pull Request is merged into main, the Continuous Delivery workflow begins automatically.
-
-After the staging deployment and E2E tests succeed, the workflow will pause and await manual approval for the production release.
-
-An authorized team member must navigate to the GitHub Actions run and approve the deployment to proceed.
+    An authorized team member must navigate to the GitHub Actions run and approve the deployment to proceed.
 
 Emergency Rollback
 - Navigate to the repository's Actions tab.
@@ -58,6 +49,6 @@ Conceptual Implementation: The deployment steps and notification steps are fully
 Future Improvements (With Unlimited Resources)
 While this pipeline is robust, with more time and resources, we could enhance it further:
 
-Integrate Real-Time Monitoring & Automated Rollbacks: The deployment script would be integrated with a monitoring service like Prometheus or Datadog. A significant spike in error rates or latency immediately following a production deployment would automatically trigger the rollback workflow, creating a self-healing system.
+1. Integrate Real-Time Monitoring & Automated Rollbacks: The deployment script would be integrated with a monitoring service like Prometheus or Datadog. A significant spike in error rates or latency immediately following a production deployment would automatically trigger the rollback workflow, creating a self-healing system.
 
-Advanced Deployment Strategies: We would implement Canary Releasing. This would allow us to release new features to a small subset of users (e.g., 1%), monitor performance, and gradually roll it out to 100%, further reducing the risk of a widespread outage.
+2. Advanced Deployment Strategies: We would implement Canary Releasing. This would allow us to release new features to a small subset of users (e.g., 1%), monitor performance, and gradually roll it out to 100%, further reducing the risk of a widespread outage.
