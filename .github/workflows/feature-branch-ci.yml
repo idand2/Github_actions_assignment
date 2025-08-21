@@ -32,6 +32,17 @@ jobs:
       - name: Run linter
         run: npm run lint
 
+      - name: Start server in background
+        run: npm start &
+        
+      - name: Wait for server
+        uses: ./.github/actions/wait-for-server
+        with:
+          url: http://localhost:3000
+          timeout_seconds: 60
+          interval_seconds: 5
+
+        
       - name: Run tests
         # sanity only, no coverage report. 
         run: npm test

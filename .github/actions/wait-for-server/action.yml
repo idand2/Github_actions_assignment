@@ -1,0 +1,26 @@
+name: 'Wait for Server'
+description: 'Waits for a server at a given URL to become responsive before timing out.'
+
+inputs:
+  url:
+    description: 'The URL to check for a successful response.'
+    required: true
+  timeout_seconds:
+    description: 'The total time in seconds to wait for the server.'
+    required: false
+    default: '30'
+  interval_seconds:
+    description: 'The time in seconds to wait between each check.'
+    required: false
+    default: '2'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Wait for server
+      run: ${{ github.action_path }}/wait.sh
+      shell: bash
+      env:
+        WAIT_URL: ${{ inputs.url }}
+        WAIT_TIMEOUT: ${{ inputs.timeout_seconds }}
+        WAIT_INTERVAL: ${{ inputs.interval_seconds }}

@@ -34,6 +34,13 @@ jobs:
       - name: start server
         run: npm start & 
 
+      - name: Wait for server
+        uses: ./.github/actions/wait-for-server
+        with:
+          url: http://localhost:3000
+          timeout_seconds: 60
+          interval_seconds: 5
+
       - name: Run tests with coverage
         run: npm test -- --coverage
       
