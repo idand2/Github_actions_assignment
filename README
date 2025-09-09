@@ -1,4 +1,4 @@
-CI/CD Strategy & Reasoning:
+CI/CD Strategy & Reasoning: avi 
     progressive, multi-stage deployment model that emphasizes security and reliability by  validating changes in increasingly production-like environments. The entire process is built on the foundation of immutable artifacts, meaning we build our Docker image once and promote that exact, unchanged artifact through every stage.
 
 The Three Stages of a Release:
